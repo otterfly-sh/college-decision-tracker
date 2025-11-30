@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美國大學放榜查詢系統 | ACE Consulting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 
+    Project: ACE Consulting College Decision Tracker (Clean Slate)
+    Features: 
+    - Full Deduplicated School List (A-Z)
+    - Default State: All TBC (Hidden)
+    - Search & Toggle functionality
+    -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #F3F4F6;
+            color: #1F2937;
+        }
+        .container-custom {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header-gradient {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #3b82f6;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3b82f6;
+        }
+        
+        /* Table Styles */
+        tr.tbc-row {
+            color: #9CA3AF; /* Gray text for TBC rows */
+        }
+        tr.confirmed-row {
+            color: #1F2937; /* Dark text for confirmed rows */
+            background-color: #F0F9FF; /* Light blue highlight */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="header-gradient text-white py-10 shadow-lg">
+        <div class="container-custom px-4 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-3 tracking-wide">美國大學放榜查詢系統</h1>
+            <p class="text-blue-100 text-base font-medium">ACE Consulting 專屬服務</p>
+            
+            <!-- Search Bar -->
+            <div class="mt-8 max-w-xl mx-auto relative">
+                <input type="text" id="searchInput" 
+                       class="w-full px-5 py-3 rounded-full text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-xl text-base placeholder-gray-400" 
+                       placeholder="輸入學校名稱搜尋 (例如: NYU, UCLA)...">
+                <div class="absolute right-4 top-3.5 text-gray-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container-custom px-4 py-8">
+        
+        <!-- Controls Bar -->
+        <div class="flex justify-between items-center mb-4 px-1">
+            <div class="text-sm text-gray-600">
+                顯示中: <span id="countDisplay" class="text-blue-600 font-bold text-lg">0</span> 所學校
+            </div>
+            
+            <!-- TBC Toggle Switch -->
+            <div class="flex items-center">
+                <label for="showTBCToggle" class="flex items-center cursor-pointer select-none">
+                    <div class="relative">
+                        <input type="checkbox" id="showTBCToggle" class="sr-only">
+                        <div class="w-10 h-6 bg-gray-300 rounded-full shadow-inner transition-colors duration-200 ease-in-out"></div>
+                        <div class="dot absolute w-4 h-4 bg-white rounded-full shadow left-1 top-1 transition-transform duration-200 ease-in-out"></div>
+                    </div>
+                    <div class="ml-3 text-sm text-gray-600 font-medium hover:text-blue-600 transition-colors">
+                        顯示 TBC (待確認)
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="card border border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
+                            <th class="py-4 px-6 font-semibold w-5/12">學校名稱 (School)</th>
+                            <th class="py-4 px-6 font-semibold w-3/12">申請批次 (Plan)</th>
+                            <th class="py-4 px-6 font-semibold w-4/12">放榜時間 (Date)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schoolTableBody" class="divide-y divide-gray-100 text-sm">
+                        <!-- Javascript will insert rows here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Empty State Message -->
+            <div id="emptyState" class="hidden py-16 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">目前沒有已公告日期的學校</h3>
+                <p class="text-gray-500 mt-1 max-w-sm mx-auto">請開啟右上角的「顯示 TBC」開關以查看所有學校，或使用搜尋功能。</p>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center text-xs text-gray-400">
+            資料持續更新中 &copy; 2025 ACE Consulting
+        </div>
+    </main>
+
+    <script>
+        /*
+         * ★★★ Mac 用戶編輯指南 (重要！) ★★★
+         * 1. 找到下面的 const schoolData = [ ... ]; 區塊。
+         * 2. 這是您的資料庫。
+         * 3. 每一行代表一間學校的一個批次。
+         *
+         * ★★★ 如何更新放榜日期 ★★★
+         * 1. 使用 Ctrl+F (或 Cmd+F) 搜尋學校名稱，例如 "Brown"。
+         * 2. 將 'TBC' 改成具體日期，保留單引號。
+         * 範例：notification: 'March 28'
+         * 3. 存檔後，該學校就會自動顯示在網頁上（不用開 TBC 開關）。
+         *
+         * ★★★ 如何新增批次 (例如新增 ED I) ★★★
+         * 1. 複製該學校原本的那一行。
+         * 2. 貼在下面。
+         * 3. 修改 type 為 'Early Decision I'。
+         * 4. 修改 notification 為日期。
+         */
+        
+        const schoolData = [
+            { school: "American University", type: "ED I", notification: "TBC" },
+            { school: "American University", type: "ED II", notification: "TBC" },
+            { school: "American University", type: "RD", notification: "TBC" },
+            { school: "Amherst College", type: "ED", notification: "TBC" },
+            { school: "Amherst College", type: "RD", notification: "TBC" },
+            { school: "Babson College", type: "ED I", notification: "TBC" },
+            { school: "Babson College", type: "EA", notification: "TBC" },
+            { school: "Babson College", type: "ED II", notification: "TBC" },
+            { school: "Babson College", type: "RD", notification: "TBC" },
+            { school: "Barnard College", type: "ED", notification: "TBC" },
+            { school: "Barnard College", type: "RD", notification: "TBC" },
+            { school: "Bates College", type: "ED I", notification: "TBC" },
+            { school: "Bates College", type: "ED II", notification: "TBC" },
+            { school: "Bates College", type: "RD", notification: "TBC" },
+            { school: "Bentley University", type: "ED I", notification: "TBC" },
+            { school: "Bentley University", type: "ED II", notification: "TBC" },
+            { school: "Bentley University", type: "RD", notification: "TBC" },
+            { school: "Berklee College of Music", type: "EA", notification: "TBC" },
+            { school: "Berklee College of Music", type: "RD", notification: "TBC" },
+            { school: "Boston College", type: "ED I", notification: "TBC" },
+            { school: "Boston College", type: "ED II", notification: "TBC" },
+            { school: "Boston College", type: "RD", notification: "TBC" },
+            { school: "Boston University", type: "ED I", notification: "TBC" },
+            { school: "Boston University", type: "ED II", notification: "TBC" },
+            { school: "Boston University", type: "RD", notification: "TBC" },
+            { school: "Bowdoin College", type: "ED I", notification: "TBC" },
+            { school: "Bowdoin College", type: "ED II", notification: "TBC" },
+            { school: "Bowdoin College", type: "RD", notification: "TBC" },
+            { school: "Brandeis University", type: "ED I", notification: "TBC" },
+            { school: "Brandeis University", type: "ED II", notification: "TBC" },
+            { school: "Brandeis University", type: "RD", notification: "TBC" },
+            { school: "Brown University", type: "ED", notification: "TBC" },
+            { school: "Brown University", type: "RD", notification: "TBC" },
+            { school: "Bryn Mawr College", type: "ED I", notification: "TBC" },
+            { school: "Bryn Mawr College", type: "ED II", notification: "TBC" },
+            { school: "Bryn Mawr College", type: "RD", notification: "TBC" },
+            { school: "Bucknell University", type: "ED I", notification: "TBC" },
+            { school: "Bucknell University", type: "ED II", notification: "TBC" },
+            { school: "Bucknell University", type: "RD", notification: "TBC" },
+            { school: "Caltech", type: "REA", notification: "TBC" },
+            { school: "Caltech", type: "RD", notification: "TBC" },
+            { school: "Carleton College", type: "ED I", notification: "TBC" },
+            { school: "Carleton College", type: "ED II", notification: "TBC" },
+            { school: "Carleton College", type: "RD", notification: "TBC" },
+            { school: "Carnegie Mellon University (CMU)", type: "ED I", notification: "TBC" },
+            { school: "Carnegie Mellon University (CMU)", type: "ED II", notification: "TBC" },
+            { school: "Carnegie Mellon University (CMU)", type: "RD", notification: "TBC" },
+            { school: "Case Western Reserve University (CWRU)", type: "EA", notification: "TBC" },
+            { school: "Case Western Reserve University (CWRU)", type: "ED I", notification: "TBC" },
+            { school: "Case Western Reserve University (CWRU)", type: "ED II", notification: "TBC" },
+            { school: "Case Western Reserve University (CWRU)", type: "RD", notification: "TBC" },
+            { school: "Catholic University of America", type: "EA", notification: "TBC" },
+            { school: "Catholic University of America", type: "RD", notification: "TBC" },
+            { school: "Chapman University", type: "EA", notification: "TBC" },
+            { school: "Chapman University", type: "RD", notification: "TBC" },
+            { school: "Claremont McKenna College (CMC)", type: "ED I", notification: "TBC" },
+            { school: "Claremont McKenna College (CMC)", type: "ED II", notification: "TBC" },
+            { school: "Claremont McKenna College (CMC)", type: "RD", notification: "TBC" },
+            { school: "Clark University", type: "EA", notification: "TBC" },
+            { school: "Clark University", type: "ED I", notification: "TBC" },
+            { school: "Clark University", type: "ED II", notification: "TBC" },
+            { school: "Clark University", type: "RD", notification: "TBC" },
+            { school: "Clemson University", type: "EA", notification: "TBC" },
+            { school: "Clemson University", type: "RD", notification: "TBC" },
+            { school: "Colby College", type: "ED I", notification: "TBC" },
+            { school: "Colby College", type: "ED II", notification: "TBC" },
+            { school: "Colby College", type: "RD", notification: "TBC" },
+            { school: "Colgate University", type: "ED I", notification: "TBC" },
+            { school: "Colgate University", type: "ED II", notification: "TBC" },
+            { school: "Colgate University", type: "RD", notification: "TBC" },
+            { school: "College of Charleston", type: "EA", notification: "TBC" },
+            { school: "College of Charleston", type: "RD", notification: "TBC" },
+            { school: "College of the Holy Cross", type: "ED I", notification: "TBC" },
+            { school: "College of the Holy Cross", type: "ED II", notification: "TBC" },
+            { school: "College of the Holy Cross", type: "RD", notification: "TBC" },
+            { school: "Colorado College", type: "ED I", notification: "TBC" },
+            { school: "Colorado College", type: "ED II", notification: "TBC" },
+            { school: "Colorado College", type: "EA", notification: "TBC" },
+            { school: "Colorado College", type: "RD", notification: "TBC" },
+            { school: "Columbia University", type: "ED", notification: "TBC" },
+            { school: "Columbia University", type: "RD", notification: "TBC" },
+            { school: "Connecticut College", type: "ED I", notification: "TBC" },
+            { school: "Connecticut College", type: "ED II", notification: "TBC" },
+            { school: "Connecticut College", type: "RD", notification: "TBC" },
+            { school: "Cornell University", type: "ED", notification: "TBC" },
+            { school: "Cornell University", type: "RD", notification: "TBC" },
+            { school: "Dartmouth College", type: "ED", notification: "TBC" },
+            { school: "Dartmouth College", type: "RD", notification: "TBC" },
+            { school: "Davidson College", type: "ED I", notification: "TBC" },
+            { school: "Davidson College", type: "ED II", notification: "TBC" },
+            { school: "Davidson College", type: "RD", notification: "TBC" },
+            { school: "Denison University", type: "ED I", notification: "TBC" },
+            { school: "Denison University", type: "ED II", notification: "TBC" },
+            { school: "Denison University", type: "RD", notification: "TBC" },
+            { school: "Dickinson College", type: "ED I", notification: "TBC" },
+            { school: "Dickinson College", type: "ED II", notification: "TBC" },
+            { school: "Dickinson College", type: "RD", notification: "TBC" },
+            { school: "Drexel University", type: "EA", notification: "TBC" },
+            { school: "Drexel University", type: "RD", notification: "TBC" },
+            { school: "Duke University", type: "ED", notification: "TBC" },
+            { school: "Duke University", type: "RD", notification: "TBC" },
+            { school: "Emerson College", type: "EA", notification: "TBC" },
+            { school: "Emerson College", type: "ED", notification: "TBC" },
+            { school: "Emerson College", type: "RD", notification: "TBC" },
+            { school: "Emory University", type: "ED I", notification: "TBC" },
+            { school: "Emory University", type: "ED II", notification: "TBC" },
+            { school: "Emory University", type: "RD", notification: "TBC" },
+            { school: "Fairfield University", type: "EA", notification: "TBC" },
+            { school: "Fairfield University", type: "ED I", notification: "TBC" },
+            { school: "Fairfield University", type: "ED II", notification: "TBC" },
+            { school: "Fairfield University", type: "RD", notification: "TBC" },
+            { school: "Florida International University (FIU)", type: "Rolling", notification: "TBC" },
+            { school: "Florida State University (FSU)", type: "EA", notification: "TBC" },
+            { school: "Florida State University (FSU)", type: "RD", notification: "TBC" },
+            { school: "Fordham University", type: "EA", notification: "TBC" },
+            { school: "Fordham University", type: "ED I", notification: "TBC" },
+            { school: "Fordham University", type: "ED II", notification: "TBC" },
+            { school: "Fordham University", type: "RD", notification: "TBC" },
+            { school: "Franklin & Marshall College", type: "ED I", notification: "TBC" },
+            { school: "Franklin & Marshall College", type: "ED II", notification: "TBC" },
+            { school: "Franklin & Marshall College", type: "RD", notification: "TBC" },
+            { school: "Furman University", type: "ED I", notification: "TBC" },
+            { school: "Furman University", type: "ED II", notification: "TBC" },
+            { school: "Furman University", type: "EA", notification: "TBC" },
+            { school: "Furman University", type: "RD", notification: "TBC" },
+            { school: "George Mason University (GMU)", type: "EA", notification: "TBC" },
+            { school: "George Mason University (GMU)", type: "RD", notification: "TBC" },
+            { school: "George Washington University (GWU)", type: "ED I", notification: "TBC" },
+            { school: "George Washington University (GWU)", type: "ED II", notification: "TBC" },
+            { school: "George Washington University (GWU)", type: "RD", notification: "TBC" },
+            { school: "Georgetown University", type: "EA", notification: "TBC" },
+            { school: "Georgetown University", type: "RD", notification: "TBC" },
+            { school: "Georgetown University in Qatar", type: "RD", notification: "TBC" },
+            { school: "Georgia Tech", type: "EA 1", notification: "TBC" },
+            { school: "Georgia Tech", type: "EA 2", notification: "TBC" },
+            { school: "Georgia Tech", type: "RD", notification: "TBC" },
+            { school: "Gettysburg College", type: "ED I", notification: "TBC" },
+            { school: "Gettysburg College", type: "ED II", notification: "TBC" },
+            { school: "Gettysburg College", type: "RD", notification: "TBC" },
+            { school: "Gonzaga University", type: "EA", notification: "TBC" },
+            { school: "Gonzaga University", type: "RD", notification: "TBC" },
+            { school: "Grinnell College", type: "ED I", notification: "TBC" },
+            { school: "Grinnell College", type: "ED II", notification: "TBC" },
+            { school: "Grinnell College", type: "RD", notification: "TBC" },
+            { school: "Hamilton College", type: "ED I", notification: "TBC" },
+            { school: "Hamilton College", type: "ED II", notification: "TBC" },
+            { school: "Hamilton College", type: "RD", notification: "TBC" },
+            { school: "Harvard University", type: "REA", notification: "TBC" },
+            { school: "Harvard University", type: "RD", notification: "TBC" },
+            { school: "Harvey Mudd College (HMC)", type: "ED I", notification: "TBC" },
+            { school: "Harvey Mudd College (HMC)", type: "ED II", notification: "TBC" },
+            { school: "Harvey Mudd College (HMC)", type: "RD", notification: "TBC" },
+            { school: "Haverford College", type: "ED I", notification: "TBC" },
+            { school: "Haverford College", type: "ED II", notification: "TBC" },
+            { school: "Haverford College", type: "RD", notification: "TBC" },
+            { school: "Howard University", type: "EA", notification: "TBC" },
+            { school: "Howard University", type: "ED", notification: "TBC" },
+            { school: "Howard University", type: "RD", notification: "TBC" },
+            { school: "Ivy Day", type: "RD", notification: "TBC" },
+            { school: "James Madison University (JMU)", type: "EA", notification: "TBC" },
+            { school: "James Madison University (JMU)", type: "RD", notification: "TBC" },
+            { school: "Johns Hopkins University (JHU)", type: "ED I", notification: "TBC" },
+            { school: "Johns Hopkins University (JHU)", type: "ED II", notification: "TBC" },
+            { school: "Johns Hopkins University (JHU)", type: "RD", notification: "TBC" },
+            { school: "Lafayette College", type: "ED I", notification: "TBC" },
+            { school: "Lafayette College", type: "ED II", notification: "TBC" },
+            { school: "Lafayette College", type: "RD", notification: "TBC" },
+            { school: "Lehigh University", type: "ED I", notification: "TBC" },
+            { school: "Lehigh University", type: "ED II", notification: "TBC" },
+            { school: "Lehigh University", type: "RD", notification: "TBC" },
+            { school: "Lewis & Clark College", type: "EA", notification: "TBC" },
+            { school: "Lewis & Clark College", type: "ED", notification: "TBC" },
+            { school: "Lewis & Clark College", type: "RD", notification: "TBC" },
+            { school: "Loyola Marymount University (LMU)", type: "EA", notification: "TBC" },
+            { school: "Loyola Marymount University (LMU)", type: "ED", notification: "TBC" },
+            { school: "Loyola Marymount University (LMU)", type: "RD", notification: "TBC" },
+            { school: "Loyola University Maryland", type: "EA", notification: "TBC" },
+            { school: "Loyola University Maryland", type: "ED", notification: "TBC" },
+            { school: "Loyola University Maryland", type: "RD", notification: "TBC" },
+            { school: "Macalester College", type: "EA", notification: "TBC" },
+            { school: "Macalester College", type: "ED I", notification: "TBC" },
+            { school: "Macalester College", type: "ED II", notification: "TBC" },
+            { school: "Macalester College", type: "RD", notification: "TBC" },
+            { school: "Mercer University", type: "EA", notification: "TBC" },
+            { school: "Mercer University", type: "RD", notification: "TBC" },
+            { school: "Miami University", type: "EA", notification: "TBC" },
+            { school: "Miami University", type: "ED", notification: "TBC" },
+            { school: "Miami University", type: "RD", notification: "TBC" },
+            { school: "Middlebury College", type: "ED I", notification: "TBC" },
+            { school: "Middlebury College", type: "ED II", notification: "TBC" },
+            { school: "Middlebury College", type: "RD", notification: "TBC" },
+            { school: "MIT", type: "EA", notification: "TBC" },
+            { school: "MIT", type: "RD", notification: "TBC" },
+            { school: "Mount Holyoke College (MHC)", type: "ED I", notification: "TBC" },
+            { school: "Mount Holyoke College (MHC)", type: "ED II", notification: "TBC" },
+            { school: "Mount Holyoke College (MHC)", type: "RD", notification: "TBC" },
+            { school: "New York University (NYU)", type: "ED I", notification: "TBC" },
+            { school: "New York University (NYU)", type: "ED II", notification: "TBC" },
+            { school: "New York University (NYU)", type: "RD", notification: "TBC" },
+            { school: "North Carolina State University (NCSU)", type: "EA", notification: "TBC" },
+            { school: "North Carolina State University (NCSU)", type: "RD", notification: "TBC" },
+            { school: "Northeastern University (NEU)", type: "EA", notification: "TBC" },
+            { school: "Northeastern University (NEU)", type: "ED I", notification: "TBC" },
+            { school: "Northeastern University (NEU)", type: "ED II", notification: "TBC" },
+            { school: "Northeastern University (NEU)", type: "RD", notification: "TBC" },
+            { school: "Northwestern University", type: "ED", notification: "TBC" },
+            { school: "Northwestern University", type: "RD", notification: "TBC" },
+            { school: "Oberlin College", type: "ED I", notification: "TBC" },
+            { school: "Oberlin College", type: "ED II", notification: "TBC" },
+            { school: "Oberlin College", type: "RD", notification: "TBC" },
+            { school: "Occidental College", type: "ED I", notification: "TBC" },
+            { school: "Occidental College", type: "ED II", notification: "TBC" },
+            { school: "Occidental College", type: "RD", notification: "TBC" },
+            { school: "Ohio State University (OSU)", type: "EA", notification: "TBC" },
+            { school: "Ohio State University (OSU)", type: "RD", notification: "TBC" },
+            { school: "Pepperdine University", type: "EA", notification: "TBC" },
+            { school: "Pepperdine University", type: "RD", notification: "TBC" },
+            { school: "Pitzer College", type: "ED I", notification: "TBC" },
+            { school: "Pitzer College", type: "ED II", notification: "TBC" },
+            { school: "Pitzer College", type: "RD", notification: "TBC" },
+            { school: "Pomona College", type: "ED I", notification: "TBC" },
+            { school: "Pomona College", type: "ED II", notification: "TBC" },
+            { school: "Pomona College", type: "RD", notification: "TBC" },
+            { school: "Princeton University", type: "SCEA", notification: "TBC" },
+            { school: "Princeton University", type: "RD", notification: "TBC" },
+            { school: "Providence College", type: "EA", notification: "TBC" },
+            { school: "Providence College", type: "ED I", notification: "TBC" },
+            { school: "Providence College", type: "ED II", notification: "TBC" },
+            { school: "Providence College", type: "RD", notification: "TBC" },
+            { school: "Purdue University", type: "EA", notification: "TBC" },
+            { school: "Purdue University", type: "RD", notification: "TBC" },
+            { school: "QuestBridge Match Day", type: "Match", notification: "TBC" },
+            { school: "Quinnipiac University (QU)", type: "EA", notification: "TBC" },
+            { school: "Quinnipiac University (QU)", type: "ED", notification: "TBC" },
+            { school: "Quinnipiac University (QU)", type: "RD", notification: "TBC" },
+            { school: "Reed College", type: "EA", notification: "TBC" },
+            { school: "Reed College", type: "ED I", notification: "TBC" },
+            { school: "Reed College", type: "ED II", notification: "TBC" },
+            { school: "Reed College", type: "RD", notification: "TBC" },
+            { school: "Rensselaer Polytechnic Institute (RPI)", type: "EA", notification: "TBC" },
+            { school: "Rensselaer Polytechnic Institute (RPI)", type: "ED I", notification: "TBC" },
+            { school: "Rensselaer Polytechnic Institute (RPI)", type: "ED II", notification: "TBC" },
+            { school: "Rensselaer Polytechnic Institute (RPI)", type: "RD", notification: "TBC" },
+            { school: "Rhode Island School of Design (RISD)", type: "ED", notification: "TBC" },
+            { school: "Rhode Island School of Design (RISD)", type: "RD", notification: "TBC" },
+            { school: "Rice University", type: "ED I", notification: "TBC" },
+            { school: "Rice University", type: "ED II", notification: "TBC" },
+            { school: "Rice University", type: "RD", notification: "TBC" },
+            { school: "Rose-Hulman", type: "EA", notification: "TBC" },
+            { school: "Rose-Hulman", type: "RD", notification: "TBC" },
+            { school: "Rutgers University New Brunswick", type: "EA", notification: "TBC" },
+            { school: "Rutgers University New Brunswick", type: "RD", notification: "TBC" },
+            { school: "Santa Clara University (SCU)", type: "EA", notification: "TBC" },
+            { school: "Santa Clara University (SCU)", type: "ED I", notification: "TBC" },
+            { school: "Santa Clara University (SCU)", type: "ED II", notification: "TBC" },
+            { school: "Santa Clara University (SCU)", type: "RD", notification: "TBC" },
+            { school: "Sarah Lawrence College (SLC)", type: "EA", notification: "TBC" },
+            { school: "Sarah Lawrence College (SLC)", type: "ED I", notification: "TBC" },
+            { school: "Sarah Lawrence College (SLC)", type: "ED II", notification: "TBC" },
+            { school: "Sarah Lawrence College (SLC)", type: "RD", notification: "TBC" },
+            { school: "Scripps College", type: "ED I", notification: "TBC" },
+            { school: "Scripps College", type: "ED II", notification: "TBC" },
+            { school: "Scripps College", type: "RD", notification: "TBC" },
+            { school: "Skidmore College", type: "ED I", notification: "TBC" },
+            { school: "Skidmore College", type: "ED II", notification: "TBC" },
+            { school: "Skidmore College", type: "RD", notification: "TBC" },
+            { school: "Smith College", type: "ED I", notification: "TBC" },
+            { school: "Smith College", type: "ED II", notification: "TBC" },
+            { school: "Smith College", type: "RD", notification: "TBC" },
+            { school: "Southern Methodist University (SMU)", type: "EA", notification: "TBC" },
+            { school: "Southern Methodist University (SMU)", type: "ED I", notification: "TBC" },
+            { school: "Southern Methodist University (SMU)", type: "ED II", notification: "TBC" },
+            { school: "Southern Methodist University (SMU)", type: "RD", notification: "TBC" },
+            { school: "Spelman College", type: "EA", notification: "TBC" },
+            { school: "Spelman College", type: "RD", notification: "TBC" },
+            { school: "Stanford University", type: "REA", notification: "TBC" },
+            { school: "Stanford University", type: "RD", notification: "TBC" },
+            { school: "Stevens Institute of Technology", type: "EA", notification: "TBC" },
+            { school: "Stevens Institute of Technology", type: "ED I", notification: "TBC" },
+            { school: "Stevens Institute of Technology", type: "ED II", notification: "TBC" },
+            { school: "Stevens Institute of Technology", type: "RD", notification: "TBC" },
+            { school: "Stony Brook University", type: "RD", notification: "TBC" },
+            { school: "Suffolk University", type: "EA", notification: "TBC" },
+            { school: "Suffolk University", type: "RD", notification: "TBC" },
+            { school: "Swarthmore College", type: "ED I", notification: "TBC" },
+            { school: "Swarthmore College", type: "ED II", notification: "TBC" },
+            { school: "Swarthmore College", type: "RD", notification: "TBC" },
+            { school: "Syracuse University", type: "ED I", notification: "TBC" },
+            { school: "Syracuse University", type: "ED II", notification: "TBC" },
+            { school: "Syracuse University", type: "RD", notification: "TBC" },
+            { school: "Texas Christian University (TCU)", type: "EA", notification: "TBC" },
+            { school: "Texas Christian University (TCU)", type: "ED I", notification: "TBC" },
+            { school: "Texas Christian University (TCU)", type: "ED II", notification: "TBC" },
+            { school: "Texas Christian University (TCU)", type: "RD", notification: "TBC" },
+            { school: "Trinity College", type: "ED I", notification: "TBC" },
+            { school: "Trinity College", type: "ED II", notification: "TBC" },
+            { school: "Trinity College", type: "RD", notification: "TBC" },
+            { school: "Trinity University", type: "EA", notification: "TBC" },
+            { school: "Trinity University", type: "ED I", notification: "TBC" },
+            { school: "Trinity University", type: "ED II", notification: "TBC" },
+            { school: "Trinity University", type: "RD", notification: "TBC" },
+            { school: "Tufts University", type: "ED I", notification: "TBC" },
+            { school: "Tufts University", type: "ED II", notification: "TBC" },
+            { school: "Tufts University", type: "RD", notification: "TBC" },
+            { school: "Tulane University", type: "ED I", notification: "TBC" },
+            { school: "Tulane University", type: "EA", notification: "TBC" },
+            { school: "Tulane University", type: "ED II", notification: "TBC" },
+            { school: "Tulane University", type: "RD", notification: "TBC" },
+            { school: "UC Berkeley", type: "RD", notification: "TBC" },
+            { school: "UC Davis (UCD)", type: "RD", notification: "TBC" },
+            { school: "UC Irvine (UCI)", type: "RD", notification: "TBC" },
+            { school: "UC Merced (UCM)", type: "RD", notification: "TBC" },
+            { school: "UC Riverside (UCR)", type: "RD", notification: "TBC" },
+            { school: "UC San Diego (UCSD)", type: "RD", notification: "TBC" },
+            { school: "UC Santa Barbara (UCSB)", type: "RD", notification: "TBC" },
+            { school: "UC Santa Cruz (UCSC)", type: "RD", notification: "TBC" },
+            { school: "UCLA", type: "RD", notification: "TBC" },
+            { school: "Union College", type: "EA", notification: "TBC" },
+            { school: "Union College", type: "ED I", notification: "TBC" },
+            { school: "Union College", type: "ED II", notification: "TBC" },
+            { school: "Union College", type: "RD", notification: "TBC" },
+            { school: "University of Central Florida (UCF)", type: "Rolling", notification: "TBC" },
+            { school: "University of Chicago (UChicago)", type: "EA", notification: "TBC" },
+            { school: "University of Chicago (UChicago)", type: "ED I", notification: "TBC" },
+            { school: "University of Chicago (UChicago)", type: "ED II", notification: "TBC" },
+            { school: "University of Chicago (UChicago)", type: "RD", notification: "TBC" },
+            { school: "University of Colorado Boulder (CU Boulder)", type: "EA", notification: "TBC" },
+            { school: "University of Colorado Boulder (CU Boulder)", type: "RD", notification: "TBC" },
+            { school: "University of Connecticut (UConn)", type: "Priority", notification: "TBC" },
+            { school: "University of Connecticut (UConn)", type: "RD", notification: "TBC" },
+            { school: "University of Denver", type: "EA", notification: "TBC" },
+            { school: "University of Denver", type: "RD", notification: "TBC" },
+            { school: "University of Florida (UF)", type: "EA", notification: "TBC" },
+            { school: "University of Florida (UF)", type: "RD", notification: "TBC" },
+            { school: "University of Georgia (UGA)", type: "EA", notification: "TBC" },
+            { school: "University of Georgia (UGA)", type: "RD", notification: "TBC" },
+            { school: "University of Illinois Urbana Champaign (UIUC)", type: "EA", notification: "TBC" },
+            { school: "University of Illinois Urbana Champaign (UIUC)", type: "RD", notification: "TBC" },
+            { school: "University of Maryland (UMD)", type: "EA", notification: "TBC" },
+            { school: "University of Maryland (UMD)", type: "RD", notification: "TBC" },
+            { school: "University of Massachusetts Amherst (UMass)", type: "EA", notification: "TBC" },
+            { school: "University of Massachusetts Amherst (UMass)", type: "RD", notification: "TBC" },
+            { school: "University of Miami (UMiami)", type: "EA", notification: "TBC" },
+            { school: "University of Miami (UMiami)", type: "ED I", notification: "TBC" },
+            { school: "University of Miami (UMiami)", type: "ED II", notification: "TBC" },
+            { school: "University of Miami (UMiami)", type: "RD", notification: "TBC" },
+            { school: "University of Michigan (UMich)", type: "EA", notification: "TBC" },
+            { school: "University of Michigan (UMich)", type: "RD", notification: "TBC" },
+            { school: "University of New Hampshire", type: "EA", notification: "TBC" },
+            { school: "University of New Hampshire", type: "RD", notification: "TBC" },
+            { school: "University of North Carolina Chapel Hill (UNC)", type: "EA", notification: "TBC" },
+            { school: "University of North Carolina Chapel Hill (UNC)", type: "RD", notification: "TBC" },
+            { school: "University of Notre Dame", type: "REA", notification: "TBC" },
+            { school: "University of Notre Dame", type: "RD", notification: "TBC" },
+            { school: "University of Pennsylvania (UPenn)", type: "ED", notification: "TBC" },
+            { school: "University of Pennsylvania (UPenn)", type: "RD", notification: "TBC" },
+            { school: "University of Rhode Island", type: "EA", notification: "TBC" },
+            { school: "University of Rhode Island", type: "RD", notification: "TBC" },
+            { school: "University of Richmond (URichmond)", type: "EA", notification: "TBC" },
+            { school: "University of Richmond (URichmond)", type: "ED I", notification: "TBC" },
+            { school: "University of Richmond (URichmond)", type: "ED II", notification: "TBC" },
+            { school: "University of Richmond (URichmond)", type: "RD", notification: "TBC" },
+            { school: "University of Rochester (URochester)", type: "ED I", notification: "TBC" },
+            { school: "University of Rochester (URochester)", type: "ED II", notification: "TBC" },
+            { school: "University of Rochester (URochester)", type: "RD", notification: "TBC" },
+            { school: "University of San Diego", type: "EA", notification: "TBC" },
+            { school: "University of San Diego", type: "RD", notification: "TBC" },
+            { school: "University of San Francisco (USFCA)", type: "EA", notification: "TBC" },
+            { school: "University of San Francisco (USFCA)", type: "RD", notification: "TBC" },
+            { school: "University of South Carolina (UofSC)", type: "EA", notification: "TBC" },
+            { school: "University of South Carolina (UofSC)", type: "RD", notification: "TBC" },
+            { school: "University of South Florida (USF)", type: "RD", notification: "TBC" },
+            { school: "University of Southern California (USC)", type: "EA", notification: "TBC" },
+            { school: "University of Southern California (USC)", type: "RD", notification: "TBC" },
+            { school: "University of Tampa", type: "EA", notification: "TBC" },
+            { school: "University of Tampa", type: "RD", notification: "TBC" },
+            { school: "University of Tennessee Knoxville (UTK)", type: "EA", notification: "TBC" },
+            { school: "University of Tennessee Knoxville (UTK)", type: "RD", notification: "TBC" },
+            { school: "University of Utah", type: "EA", notification: "TBC" },
+            { school: "University of Utah", type: "RD", notification: "TBC" },
+            { school: "University of Vermont (UVM)", type: "EA", notification: "TBC" },
+            { school: "University of Vermont (UVM)", type: "RD", notification: "TBC" },
+            { school: "University of Virginia (UVA)", type: "EA", notification: "TBC" },
+            { school: "University of Virginia (UVA)", type: "ED", notification: "TBC" },
+            { school: "University of Virginia (UVA)", type: "RD", notification: "TBC" },
+            { school: "University of Washington (UDub)", type: "RD", notification: "TBC" },
+            { school: "University of Wisconsin Madison (UW Madison)", type: "EA", notification: "TBC" },
+            { school: "University of Wisconsin Madison (UW Madison)", type: "RD", notification: "TBC" },
+            { school: "UT Austin", type: "Priority", notification: "TBC" },
+            { school: "UT Austin", type: "RD", notification: "TBC" },
+            { school: "Vanderbilt University", type: "ED I", notification: "TBC" },
+            { school: "Vanderbilt University", type: "ED II", notification: "TBC" },
+            { school: "Vanderbilt University", type: "RD", notification: "TBC" },
+            { school: "Vassar College", type: "ED I", notification: "TBC" },
+            { school: "Vassar College", type: "ED II", notification: "TBC" },
+            { school: "Vassar College", type: "RD", notification: "TBC" },
+            { school: "Villanova University", type: "EA", notification: "TBC" },
+            { school: "Villanova University", type: "ED I", notification: "TBC" },
+            { school: "Villanova University", type: "ED II", notification: "TBC" },
+            { school: "Villanova University", type: "RD", notification: "TBC" },
+            { school: "Virginia Tech", type: "EA", notification: "TBC" },
+            { school: "Virginia Tech", type: "ED", notification: "TBC" },
+            { school: "Virginia Tech", type: "RD", notification: "TBC" },
+            { school: "Wake Forest University (WFU)", type: "ED I", notification: "TBC" },
+            { school: "Wake Forest University (WFU)", type: "ED II", notification: "TBC" },
+            { school: "Wake Forest University (WFU)", type: "RD", notification: "TBC" },
+            { school: "Washington and Lee University", type: "ED I", notification: "TBC" },
+            { school: "Washington and Lee University", type: "ED II", notification: "TBC" },
+            { school: "Washington and Lee University", type: "RD", notification: "TBC" },
+            { school: "Washington University in St. Louis (WashU)", type: "ED I", notification: "TBC" },
+            { school: "Washington University in St. Louis (WashU)", type: "ED II", notification: "TBC" },
+            { school: "Washington University in St. Louis (WashU)", type: "RD", notification: "TBC" },
+            { school: "Wellesley College", type: "ED I", notification: "TBC" },
+            { school: "Wellesley College", type: "ED II", notification: "TBC" },
+            { school: "Wellesley College", type: "RD", notification: "TBC" },
+            { school: "Wesleyan University", type: "ED I", notification: "TBC" },
+            { school: "Wesleyan University", type: "ED II", notification: "TBC" },
+            { school: "Wesleyan University", type: "RD", notification: "TBC" },
+            { school: "William & Mary", type: "ED I", notification: "TBC" },
+            { school: "William & Mary", type: "ED II", notification: "TBC" },
+            { school: "William & Mary", type: "RD", notification: "TBC" },
+            { school: "Williams College", type: "ED", notification: "TBC" },
+            { school: "Williams College", type: "RD", notification: "TBC" },
+            { school: "Worcester Polytechnic Institute (WPI)", type: "EA I", notification: "TBC" },
+            { school: "Worcester Polytechnic Institute (WPI)", type: "EA II", notification: "TBC" },
+            { school: "Worcester Polytechnic Institute (WPI)", type: "RD", notification: "TBC" },
+            { school: "Yale University", type: "SCEA", notification: "TBC" },
+            { school: "Yale University", type: "RD", notification: "TBC" }
+        ];
+
+        // --- Core Logic ---
+        
+        const searchInput = document.getElementById('searchInput');
+        const tableBody = document.getElementById('schoolTableBody');
+        const emptyState = document.getElementById('emptyState');
+        const showTBCToggle = document.getElementById('showTBCToggle');
+        const countDisplay = document.getElementById('countDisplay');
+
+        // Toggle Switch Logic
+        showTBCToggle.addEventListener('change', function() {
+            const dot = this.nextElementSibling.nextElementSibling;
+            const bg = this.nextElementSibling;
+            if (this.checked) {
+                dot.style.transform = 'translateX(100%)';
+                bg.style.backgroundColor = '#3b82f6';
+            } else {
+                dot.style.transform = 'translateX(0)';
+                bg.style.backgroundColor = '#D1D5DB';
+            }
+            renderTable();
+        });
+
+        function renderTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const showTBC = showTBCToggle.checked;
+            
+            // Logic: 
+            // 1. Must match search term
+            // 2. AND (Must NOT be TBC, OR ShowTBC must be true)
+            const filteredData = schoolData.filter(item => {
+                const matchesSearch = item.school.toLowerCase().includes(searchTerm);
+                const isTBC = item.notification === 'TBC';
+                
+                // Show if match search AND (is confirmed date OR toggle is on)
+                return matchesSearch && (!isTBC || showTBC);
+            });
+
+            tableBody.innerHTML = '';
+            countDisplay.innerText = filteredData.length;
+
+            if (filteredData.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filteredData.forEach(item => {
+                    const isTBC = item.notification === 'TBC';
+                    const rowClass = isTBC ? 'tbc-row bg-white' : 'confirmed-row';
+                    const dateStyle = isTBC ? 'text-gray-400 italic' : 'text-blue-700 font-bold';
+                    
+                    const row = `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${rowClass}">
+                            <td class="py-4 px-6 font-medium">${item.school}</td>
+                            <td class="py-4 px-6">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                                    ${item.type}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 ${dateStyle}">
+                                ${item.notification}
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            }
+        }
+
+        // Event Listeners
+        searchInput.addEventListener('input', renderTable);
+
+        // Initial Render
+        renderTable();
+
+    </script>
+</body>
+</html>
